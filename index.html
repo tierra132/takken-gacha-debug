@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>宅建がちゃ</title>
+<title>宅建がちゃ【デバッグ版】</title>
 <style>
 :root{--bg:#f5f6f8;--card:#fff;--text:#20242a;--muted:#737982;--line:#e2e5e9;--red:#c93434;--blue:#3975c8;--gold:#d59b18}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP","Yu Gothic",sans-serif}
-.app{max-width:720px;margin:auto;padding:18px 14px 36px}.head{text-align:center;margin:8px 0 18px}.head h1{font-size:30px;margin:0 0 4px}.head p{margin:0;color:var(--muted);font-size:13px}
+.app{max-width:720px;margin:auto;padding:18px 14px 36px}.debugBanner{text-align:center;background:#fff3cd;border:1px solid #e0b84b;color:#765900;font-weight:900;border-radius:10px;padding:8px;margin:0 0 10px;font-size:13px}.head{text-align:center;margin:8px 0 18px}.head h1{font-size:30px;margin:0 0 4px}.head p{margin:0;color:var(--muted);font-size:13px}
 .status{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat,.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 2px 8px #00000008}.stat .label{font-size:12px;color:var(--muted)}.stat .value{font-size:24px;font-weight:800;margin-top:3px}
 .study{margin-top:10px}.study button,.adminbtn,.smallbtn{width:100%;border:0;border-radius:12px;padding:13px;font-weight:700;font-size:15px;background:#242a31;color:#fff}.study button:disabled{opacity:.45}
 .gachas{display:grid;gap:14px;margin-top:14px}.gacha{padding:17px}.gacha.red{border-top:5px solid var(--red)}.gacha.blue{border-top:5px solid var(--blue)}
@@ -33,6 +33,7 @@
 </head>
 <body>
 <div class="app">
+  <div class="debugBanner">🧪 デバッグ版</div>
   <header class="head"><h1>宅建がちゃ</h1><p>30分勉強して、がちゃ回数券を1枚。</p><p id="cloudStatus" style="margin-top:6px;font-size:11px">☁️ Firebase接続準備中…</p></header>
 
   <section class="status">
@@ -91,19 +92,21 @@ const STATE_REF = doc(db, "app", "devState");
 
 const ADMIN_PASSWORD = "takken261018";
 const DEFAULT_GACHA_PASSWORD = "yuki329";
+const DEBUG_MODE = true;
+const DEFAULT_RESET_TIME = "06:00";
 const KEY="takken_gacha_dev_v1";
 const OLD_KEY="takken_gacha_v1";
 
 const DEFAULT_TABLES={red:[["N","",72],["R","",20],["SR","",5],["SSR","",2],["UR","",1]],blue:[["N","",30],["R","",35],["SR","",20],["SSR","",10],["UR","",5]],redBonus:[["N","",70],["R","",20],["SR","",5],["SSR","",3],["UR","",2]],blueBonus:[["N","",5],["R","",15],["SR","",20],["SSR","",20],["UR","",40]]}
 const DEFAULT_GACHAS={red:{name:"赤がちゃ",comment:"さあ行こーか"},blue:{name:"青がちゃ",comment:"まだあわてるような時間じゃない"}};
-const defaults={tickets:0,todayStudy:0,totalStudy:0,lastStudyDate:"",history:[],rewards:[],examDate:"2026-10-18",gachaPassword:DEFAULT_GACHA_PASSWORD,tables:structuredClone(DEFAULT_TABLES),gachas:structuredClone(DEFAULT_GACHAS)};
+const defaults={tickets:0,todayStudy:0,totalStudy:0,lastStudyDate:"",history:[],rewards:[],examDate:"2026-10-18",gachaPassword:DEFAULT_GACHA_PASSWORD,resetTime:DEFAULT_RESET_TIME,tables:structuredClone(DEFAULT_TABLES),gachas:structuredClone(DEFAULT_GACHAS)};
 
 function clone(v){return structuredClone(v)}
 
 function decodeTables(tables){const out={};for(const key of Object.keys(DEFAULT_TABLES)){const v=(tables||{})[key];if(Array.isArray(v))out[key]=v.map(x=>Array.isArray(x)?[String(x[0]||""),String(x[1]??""),Number(x[2])||0]:x&&typeof x==="object"?[String(x.rarity||""),String(x.reward??x.bonus??x.amount??""),Number(x.probability)||0]:null).filter(Boolean);else if(v&&typeof v==="object")out[key]=Object.keys(v).sort((a,b)=>Number(a)-Number(b)).map(k=>v[k]).map(x=>Array.isArray(x)?[String(x[0]||""),String(x[1]??""),Number(x[2])||0]:[String(x.rarity||""),String(x.reward??x.bonus??x.amount??""),Number(x.probability)||0]);}return out;}
 function encodeTables(tables){const out={};for(const key of Object.keys(DEFAULT_TABLES))out[key]=(tables[key]||[]).map(x=>({rarity:String(x[0]||""),reward:String(x[1]||""),probability:Number(x[2])||0}));return out;}
-function toFirestoreState(s){const x=clone(s);x.tables=encodeTables(s.tables);x.gachas={...clone(DEFAULT_GACHAS),...(s.gachas||{})};for(const k of ["red","blue"]){x.gachas[k]={name:String(x.gachas[k]?.name||DEFAULT_GACHAS[k].name).slice(0,30),comment:String(x.gachas[k]?.comment||DEFAULT_GACHAS[k].comment).slice(0,30)}}x.history=(Array.isArray(s.history)?s.history:[]).map(h=>({time:String(h.time||""),dateKey:String(h.dateKey||""),type:String(h.type||""),gachaName:String(h.gachaName||"").slice(0,30),drawNo:Number(h.drawNo)||0,rarity:String(h.rarity||"N"),reward:String(h.reward??h.bonus??"").slice(0,12),paid:Boolean(h.paid)}));x.rewards=(Array.isArray(s.rewards)?s.rewards:[]).map(r=>({id:String(r.id||("r_"+Math.random().toString(36).slice(2))),time:String(r.time||""),dateKey:String(r.dateKey||""),type:String(r.type||""),gachaName:String(r.gachaName||"").slice(0,30),rarity:String(r.rarity||""),reward:String(r.reward||"").slice(0,12),used:Boolean(r.used)}));x.tickets=Number(s.tickets)||0;x.todayStudy=Number(s.todayStudy)||0;x.totalStudy=Number(s.totalStudy)||0;x.examDate=String(s.examDate||"2026-10-18");x.gachaPassword=String(s.gachaPassword||DEFAULT_GACHA_PASSWORD);x.lastStudyDate=String(s.lastStudyDate||"");return x;}
-function normalizeState(s){const raw=clone(s||{});const sourceTables=raw.tables||{};const legacyAmountFormat=Object.values(sourceTables).some(v=>Array.isArray(v)&&v.some(x=>x&&typeof x==="object"&&!Array.isArray(x)&&Object.prototype.hasOwnProperty.call(x,"amount")&&!Object.prototype.hasOwnProperty.call(x,"reward")));const decodedTables=legacyAmountFormat?{}:decodeTables(raw.tables);delete raw.tables;delete raw.winnings;const x={...clone(defaults),...raw};x.history=Array.isArray(x.history)?x.history.map(h=>({...h,reward:String(h.reward??h.bonus??"").slice(0,12)})):[];x.rewards=Array.isArray(x.rewards)?x.rewards.map(r=>({...r,reward:String(r.reward||"").slice(0,12),used:Boolean(r.used)})):[];x.tables={...clone(DEFAULT_TABLES),...decodedTables};for(const k of Object.keys(DEFAULT_TABLES)){const t=x.tables[k];const valid=Array.isArray(t)&&t.length===5&&t.every(r=>Array.isArray(r)&&r.length>=3&&r[0]&&r[0]!=="undefined"&&typeof r[1]==="string"&&r[1].length<=12&&Number.isFinite(Number(r[2])))&&Math.abs(t.reduce((a,r)=>a+Number(r[2]),0)-100)<.001;if(!valid)x.tables[k]=clone(DEFAULT_TABLES[k]);}x.gachas={...clone(DEFAULT_GACHAS),...(x.gachas||{})};for(const k of ["red","blue"]){x.gachas[k]={name:String(x.gachas[k]?.name||DEFAULT_GACHAS[k].name).slice(0,30),comment:String(x.gachas[k]?.comment||DEFAULT_GACHAS[k].comment).slice(0,30)}}x.tickets=Math.max(0,Number(x.tickets)||0);x.todayStudy=Math.max(0,Number(x.todayStudy)||0);x.totalStudy=Math.max(0,Number(x.totalStudy)||0);x.examDate=x.examDate||"2026-10-18";x.gachaPassword=String(x.gachaPassword||DEFAULT_GACHA_PASSWORD);return x;}
+function toFirestoreState(s){const x=clone(s);x.tables=encodeTables(s.tables);x.gachas={...clone(DEFAULT_GACHAS),...(s.gachas||{})};for(const k of ["red","blue"]){x.gachas[k]={name:String(x.gachas[k]?.name||DEFAULT_GACHAS[k].name).slice(0,30),comment:String(x.gachas[k]?.comment||DEFAULT_GACHAS[k].comment).slice(0,30)}}x.history=(Array.isArray(s.history)?s.history:[]).map(h=>({time:String(h.time||""),dateKey:String(h.dateKey||""),type:String(h.type||""),gachaName:String(h.gachaName||"").slice(0,30),drawNo:Number(h.drawNo)||0,rarity:String(h.rarity||"N"),reward:String(h.reward??h.bonus??"").slice(0,12),paid:Boolean(h.paid)}));x.rewards=(Array.isArray(s.rewards)?s.rewards:[]).map(r=>({id:String(r.id||("r_"+Math.random().toString(36).slice(2))),time:String(r.time||""),dateKey:String(r.dateKey||""),type:String(r.type||""),gachaName:String(r.gachaName||"").slice(0,30),rarity:String(r.rarity||""),reward:String(r.reward||"").slice(0,12),used:Boolean(r.used)}));x.tickets=Number(s.tickets)||0;x.todayStudy=Number(s.todayStudy)||0;x.totalStudy=Number(s.totalStudy)||0;x.examDate=String(s.examDate||"2026-10-18");x.gachaPassword=String(s.gachaPassword||DEFAULT_GACHA_PASSWORD);x.lastStudyDate=String(s.lastStudyDate||"");x.resetTime=/^([01]\d|2[0-3]):[0-5]\d$/.test(String(s.resetTime||""))?String(s.resetTime):DEFAULT_RESET_TIME;return x;}
+function normalizeState(s){const raw=clone(s||{});const sourceTables=raw.tables||{};const legacyAmountFormat=Object.values(sourceTables).some(v=>Array.isArray(v)&&v.some(x=>x&&typeof x==="object"&&!Array.isArray(x)&&Object.prototype.hasOwnProperty.call(x,"amount")&&!Object.prototype.hasOwnProperty.call(x,"reward")));const decodedTables=legacyAmountFormat?{}:decodeTables(raw.tables);delete raw.tables;delete raw.winnings;const x={...clone(defaults),...raw};x.history=Array.isArray(x.history)?x.history.map(h=>({...h,reward:String(h.reward??h.bonus??"").slice(0,12)})):[];x.rewards=Array.isArray(x.rewards)?x.rewards.map(r=>({...r,reward:String(r.reward||"").slice(0,12),used:Boolean(r.used)})):[];x.tables={...clone(DEFAULT_TABLES),...decodedTables};for(const k of Object.keys(DEFAULT_TABLES)){const t=x.tables[k];const valid=Array.isArray(t)&&t.length===5&&t.every(r=>Array.isArray(r)&&r.length>=3&&r[0]&&r[0]!=="undefined"&&typeof r[1]==="string"&&r[1].length<=12&&Number.isFinite(Number(r[2])))&&Math.abs(t.reduce((a,r)=>a+Number(r[2]),0)-100)<.001;if(!valid)x.tables[k]=clone(DEFAULT_TABLES[k]);}x.gachas={...clone(DEFAULT_GACHAS),...(x.gachas||{})};for(const k of ["red","blue"]){x.gachas[k]={name:String(x.gachas[k]?.name||DEFAULT_GACHAS[k].name).slice(0,30),comment:String(x.gachas[k]?.comment||DEFAULT_GACHAS[k].comment).slice(0,30)}}x.tickets=Math.max(0,Number(x.tickets)||0);x.todayStudy=Math.max(0,Number(x.todayStudy)||0);x.totalStudy=Math.max(0,Number(x.totalStudy)||0);x.examDate=x.examDate||"2026-10-18";x.gachaPassword=String(x.gachaPassword||DEFAULT_GACHA_PASSWORD);x.resetTime=/^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.resetTime||""))?String(x.resetTime):DEFAULT_RESET_TIME;return x;}
 
 function readLocalSeed(){
   let s=null;
@@ -114,6 +117,7 @@ function readLocalSeed(){
   if(!s)return clone(defaults);
   s=normalizeState(s);
   s.history=s.history.map(x=>({...x,dateKey:x.dateKey||dateKeyFromStored(x.time)}));
+  applyStudyDayReset(s);
   return s;
 }
 
@@ -121,6 +125,8 @@ let state=clone(defaults);
 let cloudReady=false;
 
 function cacheLocal(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch{}}
+function studyDateKey(d=new Date(), resetTime=DEFAULT_RESET_TIME){const h=Number(String(resetTime||DEFAULT_RESET_TIME).slice(0,2));return jpDateKey(new Date(d.getTime()-h*3600000));}
+function applyStudyDayReset(s){const d=studyDateKey(new Date(),s.resetTime);if(s.lastStudyDate!==d){s.todayStudy=0;s.lastStudyDate=d;return true}return false;}
 function jpDateKey(d=new Date()){
   return new Intl.DateTimeFormat("ja-JP",{timeZone:"Asia/Tokyo",year:"numeric",month:"2-digit",day:"2-digit"}).format(d).replace(/\//g,"-");
 }
@@ -181,7 +187,13 @@ async function ensureCloudState(){
   const seed=readLocalSeed();
   const result=await runTransaction(db,async tx=>{
     const snap=await tx.get(STATE_REF);
-    if(snap.exists())return snap.data();
+    if(snap.exists()){
+      const current=normalizeState(snap.data());
+      const changed=applyStudyDayReset(current);
+      if(changed)tx.set(STATE_REF,toFirestoreState(current));
+      return current;
+    }
+    applyStudyDayReset(seed);
     tx.set(STATE_REF,toFirestoreState(seed));
     return seed;
   });
@@ -200,6 +212,7 @@ async function refreshCloud(){
   }
   const before=JSON.stringify(snap.data().tables||null);
   state=normalizeState(snap.data());
+  const resetChanged=applyStudyDayReset(state);
   const after=JSON.stringify(encodeTables(state.tables));
   cloudReady=true;
   cacheLocal();
@@ -207,7 +220,7 @@ async function refreshCloud(){
   render();
   // If the old Firebase data had the broken undefined/0 table format,
   // repair it once using the intended default tables.
-  if(before!==after){
+  if(before!==after || resetChanged){
     await updateCloud(()=>state);
   }
 }
@@ -217,7 +230,7 @@ async function updateCloud(mutator){
   const result=await runTransaction(db,async tx=>{
     const snap=await tx.get(STATE_REF);
     const current=normalizeState(snap.exists()?snap.data():state);
-    const updated=normalizeState(await mutator(current));
+    const base=normalizeState(current);applyStudyDayReset(base);const updated=normalizeState(await mutator(base));
     tx.set(STATE_REF,toFirestoreState(updated));
     return updated;
   });
@@ -239,7 +252,7 @@ function openStudyModal(){
     const btn=document.getElementById("studyYes");
     btn.disabled=true;
     try{
-      await updateCloud(s=>{const d=jpDateKey();if(s.lastStudyDate!==d){s.todayStudy=0;s.lastStudyDate=d}s.todayStudy+=mins;s.totalStudy+=mins;s.tickets+=mins/30;return s});
+      await updateCloud(s=>{const d=studyDateKey(new Date(),s.resetTime);if(s.lastStudyDate!==d){s.todayStudy=0;s.lastStudyDate=d}s.todayStudy+=mins;s.totalStudy+=mins;s.tickets+=mins/30;return s});
       openModal(`<div class="result"><div class="rarity">🎫</div><div class="reward">がちゃ回数券${mins/30}枚獲得！</div></div><button class="singleBtn" id="modalCloseBtn">OK</button>`);
     }catch(err){
       console.error(err);
@@ -250,6 +263,7 @@ function openStudyModal(){
 
 function requestGachaAccess(type,count){
   if(state.tickets<count)return;
+  if(DEBUG_MODE){confirmDraw(type,count);return;}
   openModal(`<h2>🔐 ガチャを引く</h2><p>宅建チャレンジ参加者用のパスワードを入力してください。</p><input id="gachaPw" name="password" type="password" autocomplete="current-password" placeholder="パスワード"><div class="modalBtns"><button class="cancel" id="gachaCancel">キャンセル</button><button class="ok" id="gachaLogin">認証して進む</button></div>`);
   const pw=document.getElementById("gachaPw");
   setTimeout(()=>pw?.focus(),50);
@@ -354,6 +368,7 @@ document.getElementById("rewardBoxBtn").onclick=()=>showRewardBox();
 function showRewardBox(){const items=state.rewards.filter(x=>!x.used).slice().reverse();const count=items.length;const html=items.map(x=>{const cls=(x.rarity||"").toLowerCase();const g=state.gachas[x.type];const icon=x.type==="red"?"🔴":"🔵";const savedName=x.gachaName||g?.name||(x.type==="red"?"赤がちゃ":"青がちゃ");return `<div class="rewardItem ${cls}"><div class="rewardBadge ${cls}">${escapeHtml(x.rarity)}</div><div class="rewardBody"><b>${escapeHtml(x.reward)}</b><div class="rewardMeta">${icon} ${escapeHtml(savedName)} ・ ${escapeHtml(x.time)}</div></div><button class="useReward" data-id="${escapeHtml(x.id)}">使う</button></div>`}).join("");detail(`<h3>🎁 ごほうびBOX</h3><p class="boxIntro">SR以上を引いたごほうびをコレクション。レアリティの高いごほうびほど、特別なカードとして表示されます。</p><div class="boxCount">保管中：${count}個</div><div>${html||'<div class="empty">まだ保管されているごほうびはありません。</div>'}</div>`);document.querySelectorAll(".useReward").forEach(btn=>btn.onclick=async()=>{const id=btn.dataset.id;const item=state.rewards.find(x=>x.id===id&&!x.used);if(!item)return;if(!confirm(`「${item.reward}」を使用済みにしますか？`))return;try{await updateCloud(s=>{const r=s.rewards.find(x=>x.id===id);if(r)r.used=true;return s});showRewardBox()}catch(e){console.error(e);alert("保存できませんでした。")}})}
 
 document.getElementById("adminBtn").onclick=()=>{
+  if(DEBUG_MODE){showAdmin();return;}
   openModal(`<h2>🔐 管理</h2><p>管理パスワードを入力してください。</p><input id="pw" name="admin-password" type="password" autocomplete="off"><div class="modalBtns"><button class="cancel" id="adminCancel">キャンセル</button><button class="ok" id="login">入室</button></div>`);
   document.getElementById("adminCancel").onclick=closeModal;
   document.getElementById("login").onclick=()=>{
@@ -365,7 +380,15 @@ document.getElementById("adminBtn").onclick=()=>{
 function rarityOptions(selected){return ["N","R","SR","SSR","UR","なし"].map(r=>`<option value="${r}" ${r===selected?"selected":""}>${r}</option>`).join("")}
 function tableEditor(key,label,showReward=true){const source=key.endsWith("Bonus")?key.replace("Bonus",""):key;return `<div class="sectionTitle">${label}</div><div class="probedit" style="font-size:12px;color:#737982"><span>レア</span>${showReward?'<span>ごほうび</span>':''}<span>確率(%)</span></div>${state.tables[key].map((x,i)=>`<div class="probedit ${showReward?'withReward':''}"><select id="${key}_rar_${i}">${rarityOptions(x[0])}</select>${showReward?`<input maxlength="12" id="${key}_r_${i}" value="${escapeHtml(x[1])}" placeholder="最大12文字">`:''}<input type="number" min="0" max="100" step="0.1" id="${key}_p_${i}" value="${x[2]}"></div>`).join("")}<div class="note">${showReward?'5枠のレアリティは重複も含めて自由に設定できます。ごほうびは最大12文字。':'11回目はレアリティ・ごほうびを通常設定と連動し、ここでは確率だけ変更します。'}確率合計は100%にしてください。</div>`}
 function resetGacha(type){const label=type==="red"?"赤がちゃ":"青がちゃ";if(!confirm(`${label}の排出設定をごほうび・レアリティ・確率を含めて初期化しますか？`))return;state.tables[type]=clone(DEFAULT_TABLES[type]);state.tables[type+"Bonus"]=clone(DEFAULT_TABLES[type+"Bonus"]);showAdmin()}
-function showAdmin(){const a=document.getElementById("admin");a.classList.add("open");document.getElementById("detail").classList.remove("open");a.innerHTML=`<h3>⚙ 管理画面</h3><label>ガチャ可能回数</label><input id="aTickets" type="number" min="0" value="${state.tickets}"><label>今日の勉強時間（分）</label><input id="aToday" type="number" min="0" value="${state.todayStudy}"><label>累計勉強時間（分）</label><input id="aTotal" type="number" min="0" value="${state.totalStudy}"><label>試験日</label><input id="aExam" type="date" value="${state.examDate}"><label>ガチャ用パスワード（最大100文字）</label><input id="aGachaPassword" type="text" maxlength="100" value="${escapeHtml(state.gachaPassword)}" autocomplete="off"><div class="sectionTitle">🔴 赤がちゃ 表示設定</div><label>ガチャ名（最大30文字）</label><input id="redNameEdit" maxlength="30" value="${escapeHtml(state.gachas.red.name)}"><label>コメント（最大30文字）</label><input id="redCommentEdit" maxlength="30" value="${escapeHtml(state.gachas.red.comment)}">${tableEditor("red","🔴 赤がちゃ 排出設定",true)}<button class="smallbtn" id="redReset">🔄 赤がちゃ設定を初期化</button><div class="sectionTitle">🔵 青がちゃ 表示設定</div><label>ガチャ名（最大30文字）</label><input id="blueNameEdit" maxlength="30" value="${escapeHtml(state.gachas.blue.name)}"><label>コメント（最大30文字）</label><input id="blueCommentEdit" maxlength="30" value="${escapeHtml(state.gachas.blue.comment)}">${tableEditor("blue","🔵 青がちゃ 排出設定",true)}<button class="smallbtn" id="blueReset">🔄 青がちゃ設定を初期化</button>${tableEditor("redBonus","🔴 赤がちゃ 11回目の確率",false)}${tableEditor("blueBonus","🔵 青がちゃ 11回目の確率",false)}<div class="adminGrid"><button class="smallbtn" id="adminSave">修正を保存</button><button class="smallbtn" id="adminClose">閉じる</button></div><hr><p style="font-size:12px;color:#777">※11回目は通常設定の同じ枠（スロット）にあるレアリティ・ごほうびを使用し、確率だけ別に設定します。同じレアリティを複数枠に設定した場合も、それぞれのごほうびを区別できます。SR以上のごほうびは「ごほうびBOX」に保管されます。</p><button class="smallbtn danger" id="reset">全データ初期化</button>`;document.getElementById("redReset").onclick=()=>resetGacha("red");document.getElementById("blueReset").onclick=()=>resetGacha("blue");document.getElementById("adminSave").onclick=async()=>{const next=clone(state);next.tickets=Math.max(0,+document.getElementById("aTickets").value||0);next.todayStudy=Math.max(0,+document.getElementById("aToday").value||0);next.totalStudy=Math.max(0,+document.getElementById("aTotal").value||0);next.examDate=document.getElementById("aExam").value||"2026-10-18";next.gachaPassword=document.getElementById("aGachaPassword").value.trim()||DEFAULT_GACHA_PASSWORD;next.gachas.red={name:document.getElementById("redNameEdit").value.slice(0,30),comment:document.getElementById("redCommentEdit").value.slice(0,30)};next.gachas.blue={name:document.getElementById("blueNameEdit").value.slice(0,30),comment:document.getElementById("blueCommentEdit").value.slice(0,30)};for(const key of ["red","blue"]){let sum=0;for(let i=0;i<5;i++){const rarity=document.getElementById(`${key}_rar_${i}`).value;const reward=document.getElementById(`${key}_r_${i}`).value.trim();const p=Math.max(0,+document.getElementById(`${key}_p_${i}`).value||0);if(rarity==="なし"&&p>0){openModal(`<h2>確率を確認してください</h2><p>「なし」の枠は確率0%にしてください。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`);return}if(reward.length>12){openModal(`<h2>文字数を確認してください</h2><p>${key}のごほうびは最大12文字です。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`);return}next.tables[key][i]=[rarity,reward,p];sum+=p}if(Math.abs(sum-100)>.001){openModal(`<h2>確率を確認してください</h2><p>${key}の確率合計が <b>${sum}%</b> です。<br>100%になるよう修正してください。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`);return}}for(const key of ["redBonus","blueBonus"]){let sum=0;const base=key.replace("Bonus","");for(let i=0;i<5;i++){const p=Math.max(0,+document.getElementById(`${key}_p_${i}`).value||0);next.tables[key][i]=[next.tables[base][i][0],"",p];sum+=p}if(Math.abs(sum-100)>.001){openModal(`<h2>11回目の確率を確認してください</h2><p>${key}の確率合計が <b>${sum}%</b> です。100%になるよう修正してください。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`);return}}try{await updateCloud(()=>next);showAdmin()}catch(err){console.error(err);openModal(`<h2>保存できませんでした</h2><p>Firebaseへの接続でエラーが発生しました。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`)}};document.getElementById("adminClose").onclick=()=>a.classList.remove("open");document.getElementById("reset").onclick=async()=>{if(confirm("全データを初期化します。よろしいですか？")){if(confirm("本当に削除しますか？")){try{await deleteDoc(STATE_REF);localStorage.removeItem(KEY);localStorage.removeItem(OLD_KEY);state=clone(defaults);cloudReady=false;await ensureCloudState();render();showAdmin()}catch(err){console.error(err);openModal(`<h2>初期化できませんでした</h2><p>Firebaseへの接続を確認してください。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`)}}}}}
+function showAdmin(){const a=document.getElementById("admin");a.classList.add("open");document.getElementById("detail").classList.remove("open");a.innerHTML=`<h3>⚙ 管理画面</h3><label>ガチャ可能回数</label><input id="aTickets" type="number" min="0" value="${state.tickets}"><label>今日の勉強時間（分）</label><input id="aToday" type="number" min="0" value="${state.todayStudy}"><label>累計勉強時間（分）</label><input id="aTotal" type="number" min="0" value="${state.totalStudy}"><label>試験日</label><input id="aExam" type="date" value="${state.examDate}"><label>「今日の勉強時間」のリセット時刻</label><input id="aResetTime" type="time" value="${state.resetTime||DEFAULT_RESET_TIME}"><div class="note">※指定時刻になると「今日の勉強時間」が0分に切り替わります。初期値は6:00です。</div><label>ガチャ用パスワード（最大100文字）</label><input id="aGachaPassword" type="text" maxlength="100" value="${escapeHtml(state.gachaPassword)}" autocomplete="off"><div class="sectionTitle">🔴 赤がちゃ 表示設定</div><label>ガチャ名（最大30文字）</label><input id="redNameEdit" maxlength="30" value="${escapeHtml(state.gachas.red.name)}"><label>コメント（最大30文字）</label><input id="redCommentEdit" maxlength="30" value="${escapeHtml(state.gachas.red.comment)}">${tableEditor("red","🔴 赤がちゃ 排出設定",true)}<button class="smallbtn" id="redReset">🔄 赤がちゃ設定を初期化</button><div class="sectionTitle">🔵 青がちゃ 表示設定</div><label>ガチャ名（最大30文字）</label><input id="blueNameEdit" maxlength="30" value="${escapeHtml(state.gachas.blue.name)}"><label>コメント（最大30文字）</label><input id="blueCommentEdit" maxlength="30" value="${escapeHtml(state.gachas.blue.comment)}">${tableEditor("blue","🔵 青がちゃ 排出設定",true)}<button class="smallbtn" id="blueReset">🔄 青がちゃ設定を初期化</button>${tableEditor("redBonus","🔴 赤がちゃ 11回目の確率",false)}${tableEditor("blueBonus","🔵 青がちゃ 11回目の確率",false)}<div class="adminGrid"><button class="smallbtn" id="adminSave">修正を保存</button><button class="smallbtn" id="adminClose">閉じる</button></div><hr><p style="font-size:12px;color:#777">※11回目は通常設定の同じ枠（スロット）にあるレアリティ・ごほうびを使用し、確率だけ別に設定します。同じレアリティを複数枠に設定した場合も、それぞれのごほうびを区別できます。SR以上のごほうびは「ごほうびBOX」に保管されます。</p><button class="smallbtn danger" id="reset">全データ初期化</button>`;document.getElementById("redReset").onclick=()=>resetGacha("red");document.getElementById("blueReset").onclick=()=>resetGacha("blue");document.getElementById("adminSave").onclick=async()=>{const next=clone(state);next.tickets=Math.max(0,+document.getElementById("aTickets").value||0);next.todayStudy=Math.max(0,+document.getElementById("aToday").value||0);next.totalStudy=Math.max(0,+document.getElementById("aTotal").value||0);next.examDate=document.getElementById("aExam").value||"2026-10-18";next.resetTime=document.getElementById("aResetTime").value||DEFAULT_RESET_TIME;next.gachaPassword=document.getElementById("aGachaPassword").value.trim()||DEFAULT_GACHA_PASSWORD;next.gachas.red={name:document.getElementById("redNameEdit").value.slice(0,30),comment:document.getElementById("redCommentEdit").value.slice(0,30)};next.gachas.blue={name:document.getElementById("blueNameEdit").value.slice(0,30),comment:document.getElementById("blueCommentEdit").value.slice(0,30)};for(const key of ["red","blue"]){let sum=0;for(let i=0;i<5;i++){const rarity=document.getElementById(`${key}_rar_${i}`).value;const reward=document.getElementById(`${key}_r_${i}`).value.trim();const p=Math.max(0,+document.getElementById(`${key}_p_${i}`).value||0);if(rarity==="なし"&&p>0){openModal(`<h2>確率を確認してください</h2><p>「なし」の枠は確率0%にしてください。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`);return}if(reward.length>12){openModal(`<h2>文字数を確認してください</h2><p>${key}のごほうびは最大12文字です。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`);return}next.tables[key][i]=[rarity,reward,p];sum+=p}if(Math.abs(sum-100)>.001){openModal(`<h2>確率を確認してください</h2><p>${key}の確率合計が <b>${sum}%</b> です。<br>100%になるよう修正してください。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`);return}}for(const key of ["redBonus","blueBonus"]){let sum=0;const base=key.replace("Bonus","");for(let i=0;i<5;i++){const p=Math.max(0,+document.getElementById(`${key}_p_${i}`).value||0);next.tables[key][i]=[next.tables[base][i][0],"",p];sum+=p}if(Math.abs(sum-100)>.001){openModal(`<h2>11回目の確率を確認してください</h2><p>${key}の確率合計が <b>${sum}%</b> です。100%になるよう修正してください。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`);return}}try{await updateCloud(()=>next);showAdmin()}catch(err){console.error(err);openModal(`<h2>保存できませんでした</h2><p>Firebaseへの接続でエラーが発生しました。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`)}};document.getElementById("adminClose").onclick=()=>a.classList.remove("open");document.getElementById("reset").onclick=async()=>{if(confirm("全データを初期化します。よろしいですか？")){if(confirm("本当に削除しますか？")){try{await deleteDoc(STATE_REF);localStorage.removeItem(KEY);localStorage.removeItem(OLD_KEY);state=clone(defaults);cloudReady=false;await ensureCloudState();render();showAdmin()}catch(err){console.error(err);openModal(`<h2>初期化できませんでした</h2><p>Firebaseへの接続を確認してください。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`)}}}}}
+
+setInterval(async()=>{
+  if(!cloudReady)return;
+  const expected=studyDateKey(new Date(),state.resetTime);
+  if(state.lastStudyDate!==expected){
+    try{await updateCloud(s=>s)}catch(err){console.error(err)}
+  }
+},30000);
 
 (async function init(){
   render();
