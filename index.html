@@ -30,7 +30,7 @@
 .admin{display:none}.admin.open{display:block}.admin input,.admin select{width:100%;padding:11px;margin:5px 0 10px;border:1px solid var(--line);border-radius:9px}.admin label{font-size:12px;color:var(--muted)}.adminGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.danger{background:#a92b2b!important}.back{margin-top:10px}.probedit{display:grid;grid-template-columns:58px 1fr 85px;gap:7px;align-items:center;margin:5px 0}.probedit input,.probedit select{margin:0!important}.probedit.withReward{grid-template-columns:58px 1fr 85px}.rewardItem{display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:12px;border:2px solid var(--line);border-radius:14px;padding:10px 10px 10px 8px;margin:10px 0;background:#fff;box-shadow:0 2px 8px #0000000a}.rewardItem.n{border-color:#9aa0a6}.rewardItem.r{border-color:#4779bd}.rewardItem.sr{border-color:#7953a6;box-shadow:0 2px 12px #7953a620}.rewardItem.ssr{border-color:#c07a11;box-shadow:0 2px 14px #c07a1124}.rewardItem.ur{border-color:#b32626;box-shadow:0 2px 16px #b3262630}.rewardBadge{height:54px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:950;letter-spacing:.5px;background:#f5f6f8;border:2px solid currentColor}.rewardItem.r .rewardBadge{background:#eef4fb}.rewardItem.sr .rewardBadge{background:#f3eef8}.rewardItem.ssr .rewardBadge{background:#fff6e7}.rewardItem.ur .rewardBadge{background:#fff0f0}.rewardBody{min-width:0}.rewardBody b{display:block;font-size:17px;line-height:1.35;overflow-wrap:anywhere}.rewardMeta{font-size:11px;color:var(--muted);margin-top:6px}.rewardMeta .rrarity{font-size:0}.rewardMeta .rrarity:after{content:""}.useReward{border:0;border-radius:9px;padding:9px 12px;font-weight:800;background:#242a31;color:#fff;white-space:nowrap}.boxCount{font-size:12px;color:var(--muted);margin:-4px 0 10px}.boxIntro{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 12px}.sectionTitle{font-weight:800;margin:18px 0 8px}
 @media(max-width:430px){.status{grid-template-columns:1fr 1fr}.stat .value{font-size:21px}}
 
-.gachaStatus{margin:8px 0 10px;text-align:center;font-size:13px;font-weight:800}.gachaStatus.open{opacity:.75}.gachaStatus.closed{font-size:14px;font-weight:900}.gachaStatus.closed + .actions{}
+.gacha.closed{opacity:.48;filter:saturate(.55)}.gacha.closed .actions button{opacity:.55}.gacha.closed .more{opacity:.7}
 </style>
 </head>
 <body>
@@ -50,12 +50,12 @@
   <section class="gachas">
     <div class="card gacha red">
       <div class="gtitle"><h2 id="redName">🔴 赤がちゃ</h2><button class="more" id="redDetailBtn" aria-label="赤がちゃ詳細">⋯</button></div>
-      <div class="catch" id="redComment">さあ行こーか</div><div class="gachaStatus" id="redStatus"></div>
+      <div class="catch" id="redComment">さあ行こーか</div>
       <div class="actions"><button id="red1">1連</button><button id="red10">10連＋1</button></div>
     </div>
     <div class="card gacha blue">
       <div class="gtitle"><h2 id="blueName">🔵 青がちゃ</h2><button class="more" id="blueDetailBtn" aria-label="青がちゃ詳細">⋯</button></div>
-      <div class="catch" id="blueComment">まだあわてるような時間じゃない</div><div class="gachaStatus" id="blueStatus"></div>
+      <div class="catch" id="blueComment">まだあわてるような時間じゃない</div>
       <div class="actions"><button id="blue1">1連</button><button id="blue10">10連＋1</button></div>
     </div>
   </section>
@@ -172,7 +172,7 @@ function weekdayLabel(n){return ["日","月","火","水","木","金","土"][Numb
 function gachaOpenLabel(type){const g=state.gachas[type];if(isGachaOpen(type,g))return "開放中";if(g.openMode==="auto"){const at=Date.parse(String(g.autoReleaseAt||""));if(Number.isFinite(at)){const d=new Date(at);const md=new Intl.DateTimeFormat("ja-JP",{timeZone:"Asia/Tokyo",month:"numeric",day:"numeric"}).format(d);return `🔒 ${md}（${weekdayLabel(d.getDay())}）${g.autoTime}から開放`;}return `🔒 ${weekdayLabel(g.autoWeekday)}曜日 ${g.autoTime}から開放予定`;}return "🔒 予告中・現在は引けません";}
 
 function render(){
-  document.getElementById("redName").textContent="🔴 "+state.gachas.red.name;document.getElementById("redComment").textContent=state.gachas.red.comment;document.getElementById("redStatus").textContent=gachaOpenLabel("red");document.getElementById("redStatus").className="gachaStatus "+(isGachaOpen("red")?"open":"closed");document.getElementById("blueName").textContent="🔵 "+state.gachas.blue.name;document.getElementById("blueComment").textContent=state.gachas.blue.comment;document.getElementById("blueStatus").textContent=gachaOpenLabel("blue");document.getElementById("blueStatus").className="gachaStatus "+(isGachaOpen("blue")?"open":"closed");
+  document.getElementById("redName").textContent="🔴 "+state.gachas.red.name;document.getElementById("redComment").textContent=state.gachas.red.comment;document.querySelector(".gacha.red").classList.toggle("closed",!isGachaOpen("red"));document.getElementById("blueName").textContent="🔵 "+state.gachas.blue.name;document.getElementById("blueComment").textContent=state.gachas.blue.comment;document.querySelector(".gacha.blue").classList.toggle("closed",!isGachaOpen("blue"));
   document.getElementById("tickets").textContent=state.tickets+"枚";
   document.getElementById("todayStudy").textContent=state.todayStudy+"分";
   document.getElementById("totalStudy").textContent=fmt(state.totalStudy);
