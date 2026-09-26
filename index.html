@@ -364,7 +364,7 @@ function showResults(rs,i=0){
     }
     const x=rs[i],cls=x.rarity.toLowerCase();
     const nextLabel=i===rs.length-1?"結果一覧を見る":"次へ";
-    openModal(`<div class="resultNo">${i+1}回目 / 11回目</div><div class="result ${x.rarity==="UR"?"flash":""}"><div class="rarity ${cls} spark">${escapeHtml(x.rarity)}</div><div class="reward">${escapeHtml(x.reward)}</div></div><button class="singleBtn" id="nextDrawResult">${nextLabel}</button>`);
+    openModal(`<div class="resultNo">${i+1}回目</div><div class="result ${x.rarity==="UR"?"flash":""}"><div class="rarity ${cls} spark">${escapeHtml(x.rarity)}</div><div class="reward">${escapeHtml(x.reward)}</div></div><button class="singleBtn" id="nextDrawResult">${nextLabel}</button>`);
     document.getElementById("nextDrawResult").onclick=()=>showResults(rs,i+1);
     return;
   }
@@ -382,7 +382,7 @@ function detail(html){
   const d=document.getElementById("detail");d.innerHTML=html;d.classList.add("open");
   document.getElementById("admin").classList.remove("open");
 }
-function tableHtml(type,title){const g=state.gachas[type]||{};const comment=String(g.comment||"").trim();const rules=String(g.rules||"").trim();return `<h3>${title}</h3>${comment?`<div class="gachaComment"><b>💬 コメント</b><br>${escapeHtml(comment)}</div>`:""}${rules?`<div class="gachaRules"><b>📖 ガチャルール</b><br>${escapeHtml(rules)}</div>`:""}<table class="probtable"><thead><tr><th>レアリティ</th><th>ごほうび</th><th>排出確率</th></tr></thead><tbody>${state.tables[type].map(x=>{const cls=String(x[0]||"").toLowerCase();return `<tr><td><span class="rarityBadgeSmall ${cls}">${escapeHtml(x[0])}</span></td><td>${escapeHtml(x[1])}</td><td>${x[2]}%</td></tr>`}).join("")}</tbody></table><div class="note">※表示しているのは通常の1連の排出確率です。10連＋1の11回目は別設定です。</div>`}
+function tableHtml(type,title){const g=state.gachas[type]||{};const rules=String(g.rules||"").trim();return `<h3>${title}</h3><table class="probtable"><thead><tr><th>レアリティ</th><th>ごほうび</th><th>排出確率</th></tr></thead><tbody>${state.tables[type].map(x=>{const cls=String(x[0]||"").toLowerCase();return `<tr><td><span class="rarityBadgeSmall ${cls}">${escapeHtml(x[0])}</span></td><td>${escapeHtml(x[1])}</td><td>${x[2]}%</td></tr>`}).join("")}</tbody></table><div class="note">※表示しているのは通常の1連の排出確率です。10連＋1の11回目は別設定です。</div>${rules?`<div class="gachaRules">${escapeHtml(rules)}</div>`:""}`}
 document.getElementById("redDetailBtn").onclick=()=>detail(tableHtml("red","🔴 "+state.gachas.red.name+" 詳細"));document.getElementById("blueDetailBtn").onclick=()=>detail(tableHtml("blue","🔵 "+state.gachas.blue.name+" 詳細"));
 document.getElementById("historyBtn").onclick=()=>{let h=state.history.slice().reverse().map(x=>{const g=state.gachas[x.type];const icon=x.type==="red"?"🔴":"🔵";const savedName=x.gachaName||g?.name||(x.type==="red"?"赤がちゃ":"青がちゃ");return `<div class="row"><span>${x.time}<br>${icon} ${escapeHtml(savedName)}・${x.drawNo}回目・<span class="rarityBadgeSmall ${String(x.rarity||"").toLowerCase()}">${escapeHtml(x.rarity)}</span>${x.paid===false?"（11回目）":""}<br>${escapeHtml(x.reward||"")}</span></div>`}).join("");detail(`<h3>📜 ガチャ履歴</h3><div class="history">${h||'<div class="empty">まだ履歴はありません。</div>'}</div>`)};
 document.getElementById("rewardBoxBtn").onclick=()=>showRewardBox();
