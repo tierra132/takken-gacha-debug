@@ -319,13 +319,12 @@ function ceilingForNextDraw(g){
   if(!c.enabled)return null;
   const items=c.items.slice(0,c.slotCount).filter(x=>x&&Number(x.draws)>0&&x.reward);
   if(!items.length)return null;
+  // 天井は「設定した回数そのもの」に到達した回だけ発動する。
+  // 例：40回・80回なら、40/80/120/160…でのみ発動し、それ以外は通常抽選。
   const cycle=Math.max(...items.map(x=>Number(x.draws)));
   const nextDraw=Number(c.progress||0)+1;
-  const nextPos=nextDraw%cycle;
-  const target=items.find(x=>{
-    const d=Number(x.draws);
-    return nextPos===d%cycle;
-  });
+  const nextPos=((nextDraw-1)%cycle)+1;
+  const target=items.find(x=>Number(x.draws)===nextPos);
   if(!target)return null;
   return {index:c.items.indexOf(target),rarity:target.rarity||"SSR",reward:target.reward,slotCount:c.slotCount};
 }
@@ -346,11 +345,21 @@ async function doDraw(type,count){
         const nextProgress=progress+1;
         const guaranteed=ceilingForNextDraw({...s.gachas[type],ceiling:{...ceiling,progress}});
         progress=nextProgress;
+        // 天井回以外は、通常の排出設定または11回目専用確率で抽選する。
+        // 天井のごほうびを通常抽選へ混ぜることは絶対にしない。
         if(guaranteed){
-          return {rarity:guaranteed.rarity||"SSR",reward:guaranteed.reward,drawNo,paid,ceiling:true};
+          return {rarity:guaranteed.rarity||"SSR",reward:String(guaranteed.reward||"").slice(0,12),drawNo,paid,ceiling:true};
         }
-        const x=weighted(s.tables[type]);
-        return {rarity:x[0],reward:String(x[1]||"").slice(0,12),drawNo,paid};
+        const tableKey=(drawNo===11 && count===10)?type+"Bonus":type;
+        const x=weighted(s.tables[tableKey]);
+        // 11回目専用テーブルは確率だけを持つため、選ばれたスロットと
+        // 同じ通常テーブルのスロットからレアリティ・ごほうびを取得する。
+        if(drawNo===11 && count===10){
+          const base=Array.isArray(s.tables[type])?s.tables[type]:[];
+          const baseSlot=base[x[3]];
+          return {rarity:String(baseSlot?.[0]||x[0]),reward:String(baseSlot?.[1]||"").slice(0,12),drawNo,paid,ceiling:false};
+        }
+        return {rarity:x[0],reward:String(x[1]||"").slice(0,12),drawNo,paid,ceiling:false};
       };
       for(let i=0;i<count;i++)results.push(drawOne(i+1,true));
       if(count===10)results.push(drawOne(11,false));
