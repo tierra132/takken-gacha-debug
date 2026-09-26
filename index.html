@@ -317,11 +317,15 @@ function confirmDraw(type,count){
 function ceilingForNextDraw(g){
   const c=normalizeCeiling(g?.ceiling);
   if(!c.enabled)return null;
-  const items=c.items.slice(0,c.slotCount).filter(x=>x&&Number(x.draws)>0&&x.reward).sort((a,b)=>Number(a.draws)-Number(b.draws));
+  const items=c.items.slice(0,c.slotCount).filter(x=>x&&Number(x.draws)>0&&x.reward);
   if(!items.length)return null;
-  const cycle=Number(items[items.length-1].draws);
-  const pos=c.progress%cycle;
-  const target=items.find(x=>Number(x.draws)>pos);
+  const cycle=Math.max(...items.map(x=>Number(x.draws)));
+  const nextDraw=Number(c.progress||0)+1;
+  const nextPos=nextDraw%cycle;
+  const target=items.find(x=>{
+    const d=Number(x.draws);
+    return nextPos===d%cycle;
+  });
   if(!target)return null;
   return {index:c.items.indexOf(target),rarity:target.rarity||"SSR",reward:target.reward,slotCount:c.slotCount};
 }
