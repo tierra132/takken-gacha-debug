@@ -230,30 +230,66 @@ document.getElementById("modalBody").addEventListener("click",e=>{
   if(e.target.id==="modalCloseBtn") closeModal();
 });
 
+let cloudInitInProgress=false;
+let cloudRetryTimer=null;
+
+function withTimeout(promise,ms,label="Firebase接続"){
+  return Promise.race([
+    promise,
+    new Promise((_,reject)=>setTimeout(()=>{
+      const e=new Error(`${label}が${Math.round(ms/1000)}秒以内に完了しませんでした。`);
+      e.code="app/timeout";
+      reject(e);
+    },ms))
+  ]);
+}
+
 async function ensureCloudState(){
+  if(cloudInitInProgress)return;
+  cloudInitInProgress=true;
   setCloudStatus("☁️ Firebase接続中…");
-  const seed=readLocalSeed();
-  const result=await runTransaction(db,async tx=>{
-    const snap=await tx.get(STATE_REF);
+  try{
+    const seed=readLocalSeed();
+    // 初期接続では transaction を使わず、まず読み取りを行う。
+    // transaction はネットワーク不調時に内部リトライが続き、
+    // 「接続準備中」の表示が長時間残る原因になり得る。
+    const snap=await withTimeout(getDoc(STATE_REF),8000,"Firebase接続");
+    let next;
     if(snap.exists()){
-      const current=normalizeState(snap.data());
-      const changed=applyStudyDayReset(current);
-      if(changed)tx.set(STATE_REF,toFirestoreState(current));
-      return current;
+      next=normalizeState(snap.data());
+      const changed=applyStudyDayReset(next);
+      if(changed)await withTimeout(setDoc(STATE_REF,toFirestoreState(next)),8000,"Firebase保存");
+    }else{
+      applyStudyDayReset(seed);
+      await withTimeout(setDoc(STATE_REF,toFirestoreState(seed)),8000,"Firebase初期保存");
+      next=seed;
     }
-    applyStudyDayReset(seed);
-    tx.set(STATE_REF,toFirestoreState(seed));
-    return seed;
-  });
-  state=normalizeState(result);
-  cloudReady=true;
-  cacheLocal();
-  setCloudStatus("☁️ データ共有中");
-  render();
+    state=normalizeState(next);
+    cloudReady=true;
+    cacheLocal();
+    setCloudStatus("☁️ データ共有中");
+    render();
+    if(cloudRetryTimer){clearTimeout(cloudRetryTimer);cloudRetryTimer=null;}
+  }finally{
+    cloudInitInProgress=false;
+  }
+}
+
+function scheduleCloudRetry(){
+  if(cloudRetryTimer||cloudReady)return;
+  cloudRetryTimer=setTimeout(async()=>{
+    cloudRetryTimer=null;
+    try{await ensureCloudState();}
+    catch(err){
+      console.error(err);
+      setCloudStatus("⚠️ Firebase接続待ち（再試行中）");
+      scheduleCloudRetry();
+    }
+  },15000);
 }
 
 async function refreshCloud(){
-  const snap=await getDoc(STATE_REF);
+  const snap=await withTimeout(getDoc(STATE_REF),8000,"Firebase接続");
   if(!snap.exists()){
     await ensureCloudState();
     return;
@@ -515,8 +551,9 @@ setInterval(async()=>{
     cloudReady=false;
     state=readLocalSeed();
     render();
-    setCloudStatus("⚠️ Firebase接続エラー");
-    openModal(`<h2>Firebaseに接続できません</h2><p>Firebaseから返されたエラーを確認してください。</p><p style="font-size:12px;text-align:left;word-break:break-word;background:#111;color:#fff;padding:10px;border-radius:8px;">${escapeHtml((err && (err.code || err.message)) ? ((err.code||"") + " " + (err.message||"")) : String(err))}</p><button class="singleBtn" id="modalCloseBtn">OK</button>`);
+    setCloudStatus(err?.code==="app/timeout"?"⚠️ Firebase接続待ち（15秒後に再試行）":"⚠️ Firebase接続エラー");
+    scheduleCloudRetry();
+    openModal(`<h2>Firebase接続を確認しています</h2><p>${err?.code==="app/timeout"?"接続に時間がかかっています。画面は開けますが、データ共有が確認できるまで保存・ガチャ実行はできません。":"Firebaseへの接続でエラーが発生しました。"}</p><p style="font-size:12px;text-align:left;word-break:break-word;background:#111;color:#fff;padding:10px;border-radius:8px;">${escapeHtml((err && (err.code || err.message)) ? ((err.code||"") + " " + (err.message||"")) : String(err))}</p><button class="singleBtn" id="modalCloseBtn">OK</button>`);
   }
 })();
 setInterval(()=>{if(cloudReady)refreshCloud().catch(console.error);},60000);
