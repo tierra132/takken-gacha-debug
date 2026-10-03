@@ -38,6 +38,7 @@
 
 .gacha.closed{opacity:.48;filter:saturate(.55)}.gacha.closed .actions button{opacity:.55}.gacha.closed .more{opacity:.7}
 
+.materialConvertControls{display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap;justify-content:flex-end}.materialConvertControls label{font-size:11px;color:var(--muted);font-weight:800;width:100%;text-align:right}.materialConvertQty{width:72px!important;margin:0!important}.useMaterialGroup{border:0;border-radius:10px;padding:9px 11px;font-weight:900;background:#2f6fed;color:#fff}.materialBadge{background:#eef5ff;color:#2f6fed;border:1px solid #bcd1ff}.materialRewardItem .rewardBody{min-width:0}.materialRewardItem{align-items:flex-start}
 .materialCard,.exchangeCard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;box-shadow:0 2px 8px #00000008}.materialBalance{font-size:22px;font-weight:900;margin-top:4px}.exchangeTitle{font-weight:900;font-size:16px}.exchangeNeed,.exchangeGet{margin-top:7px;line-height:1.6}.exchangeArrow{text-align:center;color:var(--muted);font-weight:900;margin:4px 0}.exchangeBtn{width:100%;margin-top:10px;border:0;border-radius:10px;padding:10px;font-weight:900;background:#242a31;color:#fff}.adminMaterial,.recipeAdmin{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;background:#fafafa}.adminMini{display:grid;grid-template-columns:1fr 100px;gap:7px;margin:6px 0}.adminMini.output{grid-template-columns:64px 1fr 80px}.miniTitle{font-size:12px;font-weight:800;margin-top:10px;color:var(--muted)}.tableHead{grid-template-columns:52px 1fr 105px 55px 70px!important}.probedit.withMaterial{grid-template-columns:52px 1fr 105px 55px 70px!important}.adminMaterial{display:grid;grid-template-columns:1fr auto;gap:8px}.gachaProgress{font-size:12px;color:var(--muted);text-align:right;margin-top:8px}.links{grid-template-columns:1fr 1fr 1fr!important}
 @media(max-width:430px){.tableHead,.probedit.withMaterial{grid-template-columns:50px minmax(0,1fr) 78px 48px 62px!important}.adminMini.output{grid-template-columns:58px minmax(0,1fr) 62px}.links{grid-template-columns:1fr 1fr!important}.links #adminBtn{grid-column:1/-1!important}}
 .bonusHead{grid-template-columns:52px 1fr 70px!important}.bonusRow{grid-template-columns:52px 1fr 70px!important}.bonusLinked{font-size:11px;color:var(--muted);padding:0 4px}.bonusRow input{margin:0!important}
@@ -157,7 +158,7 @@ function makeId(prefix){return prefix+"_"+Date.now().toString(36)+"_"+Math.rando
 function normalizeMaterials(list){return (Array.isArray(list)?list:[]).map(m=>({id:String(m.id||makeId("mat")),name:String(m.name||"").slice(0,40),unit:String(m.unit||"").slice(0,20),balance:Math.max(0,Number(m.balance)||0)})).filter(m=>m.name);}
 function normalizeExchangeShop(shop){const x=shop&&typeof shop==="object"?shop:{};const recipes=Array.isArray(x.recipes)?x.recipes:[];return {name:"素材・交換所",rules:String(x.rules||""),recipes:recipes.map(r=>({id:String(r.id||makeId("ex")),name:String(r.name||"").slice(0,40),requirements:(Array.isArray(r.requirements)?r.requirements:[]).slice(0,3).map(q=>({materialId:String(q.materialId||""),qty:Math.max(0,Number(q.qty)||0)})),outputs:(Array.isArray(r.outputs)?r.outputs:[]).slice(0,3).map(o=>({reward:String(o.reward||"").slice(0,20),rarity:["N","R","SR","SSR","UR"].includes(o.rarity)?o.rarity:"SR",qty:Math.max(1,Math.floor(Number(o.qty)||1))}))})).filter(r=>r.name||r.requirements.some(q=>q.materialId&&q.qty>0)||r.outputs.some(o=>o.reward))};}
 function toFirestoreState(s){const x=clone(s);x.tables=encodeTables(s.tables);x.gachas={...clone(DEFAULT_GACHAS),...(s.gachas||{})};for(const k of ["red","blue"]){const g=x.gachas[k]||{};const c=normalizeCeiling(g.ceiling);x.gachas[k]={name:String(g.name||DEFAULT_GACHAS[k].name).slice(0,30),comment:String(g.comment??DEFAULT_GACHAS[k].comment),rules:String(g.rules??DEFAULT_GACHAS[k].rules??""),openMode:["open","closed","auto"].includes(g.openMode)?g.openMode:"open",autoWeekday:Math.min(6,Math.max(0,Number.isInteger(Number(g.autoWeekday))?Number(g.autoWeekday):1)),autoTime:/^([01]\d|2[0-3]):[0-5]\d$/.test(String(g.autoTime||""))?String(g.autoTime):"18:00",autoReleaseAt:String(g.autoReleaseAt||""),ceiling:{enabled:c.enabled,slotCount:c.slotCount,items:c.items,progress:c.progress}}}x.history=(Array.isArray(s.history)?s.history:[]).map(h=>({time:String(h.time||""),dateKey:String(h.dateKey||""),type:String(h.type||""),sourceType:String(h.sourceType||"gacha"),sourceName:String(h.sourceName||h.gachaName||"").slice(0,40),gachaName:String(h.gachaName||"").slice(0,30),drawNo:Number(h.drawNo)||0,rarity:String(h.rarity||"N"),reward:String(h.reward??h.bonus??"").slice(0,20),paid:Boolean(h.paid)}));x.rewards=(Array.isArray(s.rewards)?s.rewards:[]).map(r=>({id:String(r.id||makeId("rew")),time:String(r.time||""),dateKey:String(r.dateKey||""),type:String(r.type||""),sourceType:String(r.sourceType||"gacha"),sourceName:String(r.sourceName||r.gachaName||"").slice(0,40),gachaName:String(r.gachaName||"").slice(0,30),rarity:String(r.rarity||""),reward:String(r.reward||"").slice(0,20),materialId:String(r.materialId||""),materialQty:Math.max(0,Number(r.materialQty)||0),used:Boolean(r.used)}));x.materials=normalizeMaterials(s.materials);x.exchangeShop=normalizeExchangeShop(s.exchangeShop);x.tickets=Number(s.tickets)||0;x.todayStudy=Number(s.todayStudy)||0;x.totalStudy=Number(s.totalStudy)||0;x.examDate=String(s.examDate||"2026-10-18");x.gachaPassword=String(s.gachaPassword||DEFAULT_GACHA_PASSWORD);x.lastStudyDate=String(s.lastStudyDate||"");x.resetTime=/^([01]\d|2[0-3]):[0-5]\d$/.test(String(s.resetTime||""))?String(s.resetTime):DEFAULT_RESET_TIME;return x;}
-function normalizeState(s){const raw=clone(s||{});const sourceTables=raw.tables||{};const legacyAmountFormat=Object.values(sourceTables).some(v=>Array.isArray(v)&&v.some(x=>x&&typeof x==="object"&&!Array.isArray(x)&&Object.prototype.hasOwnProperty.call(x,"amount")&&!Object.prototype.hasOwnProperty.call(x,"reward")));const decodedTables=legacyAmountFormat?{}:decodeTables(raw.tables);delete raw.tables;delete raw.winnings;const x={...clone(defaults),...raw};x.history=Array.isArray(x.history)?x.history.map(h=>({...h,reward:String(h.reward??h.bonus??"").slice(0,20),sourceType:String(h.sourceType||"gacha"),sourceName:String(h.sourceName||h.gachaName||"").slice(0,40)})):[];x.rewards=Array.isArray(x.rewards)?x.rewards.map(r=>({...r,reward:String(r.reward||"").slice(0,20),used:Boolean(r.used),sourceType:String(r.sourceType||"gacha"),sourceName:String(r.sourceName||r.gachaName||"").slice(0,40),materialId:String(r.materialId||""),materialQty:Math.max(0,Number(r.materialQty)||0)})):[];x.tables={...clone(DEFAULT_TABLES),...decodedTables};for(const k of Object.keys(DEFAULT_TABLES)){const t=x.tables[k];const valid=Array.isArray(t)&&t.length===5&&t.every(r=>Array.isArray(r)&&r.length>=3&&r[0]&&r[0]!=="undefined"&&typeof r[1]==="string"&&r[1].length<=20&&Number.isFinite(Number(r[2]))&&r[2]>=0)&&Math.abs(t.reduce((a,r)=>a+Number(r[2]),0)-100)<.001;if(!valid)x.tables[k]=clone(DEFAULT_TABLES[k]);else x.tables[k]=t.map(normalizeTableRow)}x.gachas={...clone(DEFAULT_GACHAS),...(x.gachas||{})};for(const k of ["red","blue"]){const g=x.gachas[k]||{};const c=normalizeCeiling(g.ceiling);x.gachas[k]={name:String(g.name||DEFAULT_GACHAS[k].name).slice(0,30),comment:String(g.comment??DEFAULT_GACHAS[k].comment),rules:String(g.rules??DEFAULT_GACHAS[k].rules??""),openMode:["open","closed","auto"].includes(g.openMode)?g.openMode:"open",autoWeekday:Math.min(6,Math.max(0,Number.isInteger(Number(g.autoWeekday))?Number(g.autoWeekday):1)),autoTime:/^([01]\d|2[0-3]):[0-5]\d$/.test(String(g.autoTime||""))?String(g.autoTime):"18:00",autoReleaseAt:String(g.autoReleaseAt||""),ceiling:c}}x.materials=normalizeMaterials(x.materials);x.exchangeShop=normalizeExchangeShop(x.exchangeShop);x.tickets=Math.max(0,Number(x.tickets)||0);x.todayStudy=Math.max(0,Number(x.todayStudy)||0);x.totalStudy=Math.max(0,Number(x.totalStudy)||0);x.examDate=x.examDate||"2026-10-18";x.gachaPassword=String(x.gachaPassword||DEFAULT_GACHA_PASSWORD);x.resetTime=/^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.resetTime||""))?String(x.resetTime):DEFAULT_RESET_TIME;return x;}
+function normalizeState(s){const raw=clone(s||{});const sourceTables=raw.tables||{};const legacyAmountFormat=Object.values(sourceTables).some(v=>Array.isArray(v)&&v.some(x=>x&&typeof x==="object"&&!Array.isArray(x)&&Object.prototype.hasOwnProperty.call(x,"amount")&&!Object.prototype.hasOwnProperty.call(x,"reward")));const decodedTables=legacyAmountFormat?{}:decodeTables(raw.tables);delete raw.tables;delete raw.winnings;const x={...clone(defaults),...raw};x.history=Array.isArray(x.history)?x.history.map(h=>({...h,reward:String(h.reward??h.bonus??"").slice(0,20),sourceType:String(h.sourceType||"gacha"),sourceName:String(h.sourceName||h.gachaName||"").slice(0,40)})):[];x.rewards=Array.isArray(x.rewards)?x.rewards.map(r=>({...r,reward:String(r.reward||"").slice(0,20),used:Boolean(r.used),sourceType:String(r.sourceType||"gacha"),sourceName:String(r.sourceName||r.gachaName||"").slice(0,40),materialId:String(r.materialId||""),materialQty:Math.max(0,Number(r.materialQty)||0)})):[];x.tables={...clone(DEFAULT_TABLES),...decodedTables};for(const k of Object.keys(DEFAULT_TABLES)){const t=x.tables[k];const valid=Array.isArray(t)&&t.length===5&&t.every(r=>Array.isArray(r)&&r.length>=3&&r[0]&&r[0]!=="undefined"&&typeof r[1]==="string"&&r[1].length<=20&&Number.isFinite(Number(r[2]))&&r[2]>=0)&&Math.abs(t.reduce((a,r)=>a+Number(r[2]),0)-100)<.001;if(!valid)x.tables[k]=clone(DEFAULT_TABLES[k]);else x.tables[k]=t.map(normalizeTableRow)}x.rewards=x.rewards.map(r=>{if(r.materialId||r.sourceType!=="gacha"||!r.reward)return r;const candidates=(x.tables[r.type]||[]).filter(row=>String(row[0]||"")===String(r.rarity||"")&&String(row[1]||"")===String(r.reward||"")&&row[3]&&Number(row[4])>0);if(candidates.length===1){r.materialId=String(candidates[0][3]);r.materialQty=Math.max(0,Number(candidates[0][4])||0)}return r});x.gachas={...clone(DEFAULT_GACHAS),...(x.gachas||{})};for(const k of ["red","blue"]){const g=x.gachas[k]||{};const c=normalizeCeiling(g.ceiling);x.gachas[k]={name:String(g.name||DEFAULT_GACHAS[k].name).slice(0,30),comment:String(g.comment??DEFAULT_GACHAS[k].comment),rules:String(g.rules??DEFAULT_GACHAS[k].rules??""),openMode:["open","closed","auto"].includes(g.openMode)?g.openMode:"open",autoWeekday:Math.min(6,Math.max(0,Number.isInteger(Number(g.autoWeekday))?Number(g.autoWeekday):1)),autoTime:/^([01]\d|2[0-3]):[0-5]\d$/.test(String(g.autoTime||""))?String(g.autoTime):"18:00",autoReleaseAt:String(g.autoReleaseAt||""),ceiling:c}}x.materials=normalizeMaterials(x.materials);x.exchangeShop=normalizeExchangeShop(x.exchangeShop);x.tickets=Math.max(0,Number(x.tickets)||0);x.todayStudy=Math.max(0,Number(x.todayStudy)||0);x.totalStudy=Math.max(0,Number(x.totalStudy)||0);x.examDate=x.examDate||"2026-10-18";x.gachaPassword=String(x.gachaPassword||DEFAULT_GACHA_PASSWORD);x.resetTime=/^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.resetTime||""))?String(x.resetTime):DEFAULT_RESET_TIME;return x;}
 
 function readLocalSeed(){
   let s=null;
@@ -196,8 +197,8 @@ function getDrawCountToday(){return getTodayHistory().length}
 function weighted(t){
   const arr=Array.isArray(t)?t:[];
   const normalized=arr.map((x,i)=>{
-    if(Array.isArray(x)) return [String(x[0]||""),String(x[1]??""),Number(x[2])||0,i];
-    if(x&&typeof x==="object") return [String(x.rarity||""),String(x.reward??""),Number(x.probability)||0,i];
+    if(Array.isArray(x)) return [String(x[0]||""),String(x[1]??""),Number(x[2])||0,i,String(x[3]||""),Math.max(0,Number(x[4])||0)];
+    if(x&&typeof x==="object") return [String(x.rarity||""),String(x.reward??""),Number(x.probability)||0,i,String(x.materialId||""),Math.max(0,Number(x.materialQty)||0)];
     return null;
   }).filter(x=>x&&x[0]&&x[0]!=="なし"&&Number(x[2])>0);
   if(!normalized.length) throw new Error("INVALID_GACHA_TABLE");
@@ -206,11 +207,10 @@ function weighted(t){
   for(const x of normalized){acc+=Number(x[2]);if(r<acc)return x;}
   return normalized[normalized.length-1];
 }
-
 function materialOptions(selected="",allowBlank=true){const blank=allowBlank?`<option value="">素材なし</option>`:"";return blank+state.materials.map(m=>`<option value="${escapeHtml(m.id)}" ${m.id===selected?"selected":""}>${escapeHtml(m.name)}</option>`).join("");}
 function materialName(id){return state.materials.find(m=>m.id===id)?.name||"素材";}
 function sourceLabel(x){if(x.sourceType==="exchange")return `🔄 ${x.sourceName||"交換所"}`;const icon=x.type==="red"?"🔴":x.type==="blue"?"🔵":"🎁";return `${icon} ${x.sourceName||x.gachaName||"がちゃ"}`;}
-function isBoxReward(rarity,materialId,materialQty){return ["R","SR","SSR","UR"].includes(String(rarity||"")) || Boolean(materialId&&Number(materialQty)>0);}
+function isBoxReward(rarity,materialId,materialQty){return ["SR","SSR","UR"].includes(String(rarity||"")) || Boolean(materialId&&Number(materialQty)>0);}
 function makeRewardFromExchange(output,sourceName,time,dateKey){return {id:makeId("rew"),time,dateKey,type:"exchange",sourceType:"exchange",sourceName, gachaName:"",rarity:output.rarity,reward:output.qty>1?`${output.reward} ×${output.qty}`:output.reward,materialId:"",materialQty:0,used:false};}
 
 function setCloudStatus(text){
@@ -471,9 +471,86 @@ function tableHtml(type,title){const g=state.gachas[type]||{};const rules=String
 document.getElementById("redDetailBtn").onclick=()=>detail(tableHtml("red","🔴 "+state.gachas.red.name+" 詳細"));document.getElementById("blueDetailBtn").onclick=()=>detail(tableHtml("blue","🔵 "+state.gachas.blue.name+" 詳細"));
 document.getElementById("historyBtn").onclick=()=>{let h=state.history.slice().reverse().map(x=>{const savedName=x.sourceName||x.gachaName||(x.type==="red"?"赤がちゃ":"青がちゃ");const icon=x.sourceType==="exchange"?"🔄":x.type==="red"?"🔴":"🔵";return `<div class="row"><span>${escapeHtml(x.time)}<br>${icon} ${escapeHtml(savedName)}・${x.drawNo?x.drawNo+"回目・":""}<span class="rarityBadgeSmall ${String(x.rarity||"").toLowerCase()}">${escapeHtml(x.rarity)}</span>${x.paid===false?"（11回目）":""}<br>${escapeHtml(x.reward||"")}</span></div>`}).join("");detail(`<h3>📜 ガチャ・交換履歴</h3><div class="history">${h||'<div class="empty">まだ履歴はありません。</div>'}</div>`) };
 document.getElementById("rewardBoxBtn").onclick=()=>showRewardBox();
-function showRewardBox(){const items=state.rewards.filter(x=>!x.used).slice().reverse();const count=items.length;const html=items.map(x=>{const cls=(x.rarity||"").toLowerCase();const isMaterial=Boolean(x.materialId&&x.materialQty>0);const actionLabel=isMaterial?"素材に変換":"使う";return `<div class="rewardItem ${cls}"><div class="rewardBadge ${cls}">${escapeHtml(x.rarity)}</div><div class="rewardBody"><b>${escapeHtml(x.reward)}</b><div class="rewardMeta">${escapeHtml(sourceLabel(x))}${isMaterial?` ・ 素材：${escapeHtml(materialName(x.materialId))}${x.materialQty>0?` ×${x.materialQty}`:""}`:""} ・ ${escapeHtml(x.time)}</div></div><button class="useReward" data-id="${escapeHtml(x.id)}">${actionLabel}</button></div>`}).join("");detail(`<h3>🎁 ごほうびBOX</h3><p class="boxIntro">ガチャや交換所から入手したR以上のごほうびを保管します。素材になるごほうびは「素材に変換」で累積素材へ加算されます。</p><div class="boxCount">保管中：${count}個</div><div>${html||'<div class="empty">まだ保管されているごほうびはありません。</div>'}</div>`);document.querySelectorAll(".useReward").forEach(btn=>btn.onclick=async()=>{const id=btn.dataset.id;const item=state.rewards.find(x=>x.id===id&&!x.used);if(!item)return;const isMaterial=Boolean(item.materialId&&item.materialQty>0);const materialText=isMaterial?`${materialName(item.materialId)}に${item.materialQty}加算されます`:`ごほうびを使用済みにします`;const confirmText=isMaterial?`「${item.reward}」を素材に変換しますか？\n\n${materialText}`:`「${item.reward}」を使用しますか？`;if(!confirm(confirmText))return;try{await updateCloud(s=>{const r=s.rewards.find(x=>x.id===id&&!x.used);if(!r)throw new Error("REWARD_NOT_FOUND");if(r.materialId&&r.materialQty>0){const m=s.materials.find(m=>m.id===r.materialId);if(!m)throw new Error("MATERIAL_NOT_FOUND");m.balance+=r.materialQty;}r.used=true;return s});showRewardBox()}catch(e){console.error(e);openModal(`<h2>使用できませんでした</h2><p>素材設定を確認してください。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`)}})}
+function showRewardBox(){
+  const items=state.rewards.filter(x=>!x.used);
+  const materialGroups=new Map();
+  const normalItems=[];
+  for(const x of items){
+    const isMaterial=Boolean(x.materialId&&Number(x.materialQty)>0);
+    if(isMaterial){
+      const key=String(x.materialId);
+      if(!materialGroups.has(key))materialGroups.set(key,{materialId:key,total:0,ids:[],times:[],sources:new Set(),rewardNames:new Set()});
+      const g=materialGroups.get(key);
+      g.total+=Math.max(0,Number(x.materialQty)||0);
+      g.ids.push(x.id);
+      g.times.push(x.time);
+      g.sources.add(sourceLabel(x));
+      if(x.reward)g.rewardNames.add(x.reward);
+    }else if(["SR","SSR","UR"].includes(String(x.rarity||""))){
+      normalItems.push(x);
+    }
+  }
+  const grouped=Array.from(materialGroups.values()).sort((a,b)=>{
+    const an=materialName(a.materialId),bn=materialName(b.materialId);
+    return an.localeCompare(bn,"ja");
+  });
+  const materialHtml=grouped.map(g=>{
+    const unit=state.materials.find(m=>m.id===g.materialId)?.unit||"";
+    const source=Array.from(g.sources).join(" / ");
+    const name=materialName(g.materialId);
+    return `<div class="rewardItem materialRewardItem materialGroup" data-material-id="${escapeHtml(g.materialId)}">
+      <div class="rewardBadge materialBadge">素材</div>
+      <div class="rewardBody"><b>${escapeHtml(name)}</b><div class="rewardMeta">素材として入手 ・ ${escapeHtml(source)} ・ ${g.total}${escapeHtml(unit)}</div></div>
+      <div class="materialConvertControls"><label>変換数</label><input class="materialConvertQty" type="number" min="1" max="${g.total}" value="${g.total}" data-material-id="${escapeHtml(g.materialId)}"><button class="useMaterialGroup" data-material-id="${escapeHtml(g.materialId)}" data-total="${g.total}">素材に変換</button></div>
+    </div>`;
+  }).join("");
+  const normalHtml=normalItems.slice().reverse().map(x=>{
+    const cls=(x.rarity||"").toLowerCase();
+    return `<div class="rewardItem ${cls}"><div class="rewardBadge ${cls}">${escapeHtml(x.rarity)}</div><div class="rewardBody"><b>${escapeHtml(x.reward)}</b><div class="rewardMeta">${escapeHtml(sourceLabel(x))} ・ ${escapeHtml(x.time)}</div></div><button class="useReward" data-id="${escapeHtml(x.id)}">使う</button></div>`;
+  }).join("");
+  const allCount=items.length;
+  const materialTotal=grouped.reduce((a,g)=>a+g.total,0);
+  detail(`<h3>🎁 ごほうびBOX</h3><p class="boxIntro">SR以上のごほうびと、素材として入手したごほうびを保管します。素材は同じものをまとめて表示し、必要な数だけ素材残高へ変換できます。</p><div class="boxCount">保管中：${allCount}件 ・ 素材：${materialTotal}個</div><div>${materialHtml}${normalHtml}${!materialHtml&&!normalHtml?'<div class="empty">まだ保管されているごほうびはありません。</div>':""}</div>`);
+  document.querySelectorAll(".useReward").forEach(btn=>btn.onclick=async()=>{
+    const id=btn.dataset.id;
+    const item=state.rewards.find(x=>x.id===id&&!x.used);
+    if(!item)return;
+    if(!confirm(`「${item.reward}」を使用しますか？`))return;
+    try{await updateCloud(s=>{const r=s.rewards.find(x=>x.id===id&&!x.used);if(!r)throw new Error("REWARD_NOT_FOUND");r.used=true;return s});showRewardBox()}
+    catch(e){console.error(e);openModal(`<h2>使用できませんでした</h2><p>ごほうびの状態を確認してください。</p><button class="singleBtn" id="modalCloseBtn">OK</button>`)}});
+  document.querySelectorAll(".useMaterialGroup").forEach(btn=>btn.onclick=async()=>{
+    const materialId=btn.dataset.materialId;
+    const total=Number(btn.dataset.total)||0;
+    const input=document.querySelector(`.materialConvertQty[data-material-id="${CSS.escape(materialId)}"]`);
+    const qty=Math.max(1,Math.min(total,Math.floor(Number(input?.value)||total)));
+    if(qty!==Number(input?.value||total))if(input)input.value=qty;
+    const name=materialName(materialId);
+    const unit=state.materials.find(m=>m.id===materialId)?.unit||"";
+    if(!confirm(`素材「${name}」を ${qty}${unit} 変換しますか？\n\n${qty}${unit} が素材残高に加算されます。${qty===total?'\n\n保管中のこの素材をすべて変換します。':''}`))return;
+    try{
+      await updateCloud(s=>{
+        const m=s.materials.find(m=>m.id===materialId);
+        if(!m)throw new Error("MATERIAL_NOT_FOUND");
+        let remain=qty;
+        const targets=s.rewards.filter(r=>!r.used&&r.materialId===materialId&&Number(r.materialQty)>0);
+        for(const r of targets){
+          if(remain<=0)break;
+          const have=Math.max(0,Number(r.materialQty)||0);
+          const take=Math.min(have,remain);
+          r.materialQty=have-take;
+          remain-=take;
+          if(r.materialQty<=0)r.used=true;
+        }
+        if(remain>0)throw new Error("MATERIAL_REWARD_NOT_ENOUGH");
+        m.balance=Math.max(0,Number(m.balance)||0)+qty;
+        return s;
+      });
+      showRewardBox();
+    }catch(e){console.error(e);openModal(`<h2>素材に変換できませんでした</h2><p>${e.message==="MATERIAL_NOT_FOUND"?"素材設定が見つかりません。":"保管中の素材が不足しています。"}</p><button class="singleBtn" id="modalCloseBtn">OK</button>`)}
+  });
+}
 function showMaterials(){const mats=state.materials;const rows=mats.map(m=>`<div class="materialCard"><div><b>${escapeHtml(m.name)}</b><div class="materialBalance">${m.balance} ${escapeHtml(m.unit)}</div></div></div>`).join("");const shop=state.exchangeShop||{};const recipes=(shop.recipes||[]).filter(r=>r.name||r.outputs?.length).map(r=>`<div class="exchangeCard"><div class="exchangeTitle">${escapeHtml(r.name||"交換")}</div><div class="exchangeNeed">${r.requirements.filter(q=>q.materialId&&q.qty>0).map(q=>`${escapeHtml(materialName(q.materialId))} ×${q.qty}`).join(" ＋ ")||"交換条件未設定"}</div><div class="exchangeArrow">↓</div><div class="exchangeGet">${r.outputs.filter(o=>o.reward).map(o=>`<span class="rarityBadgeSmall ${o.rarity.toLowerCase()}">${escapeHtml(o.rarity)}</span> ${escapeHtml(o.reward)}${o.qty>1?` ×${o.qty}`:""}`).join("<br>")||"交換ごほうび未設定"}</div><button class="exchangeBtn" data-id="${escapeHtml(r.id)}">交換する</button></div>`).join("");detail(`<h3>🧩 素材・交換所</h3>${shop.rules?`<div class="gachaRules">${escapeHtml(shop.rules)}</div>`:""}<div class="sectionTitle">素材残高</div><div>${rows||'<div class="empty">素材はまだ設定されていません。</div>'}</div><div class="sectionTitle">交換所</div><div>${recipes||'<div class="empty">交換できるごほうびはまだ設定されていません。</div>'}</div>`);document.querySelectorAll(".exchangeBtn").forEach(btn=>btn.onclick=()=>doExchange(btn.dataset.id))}
-async function doExchange(recipeId){const recipe=state.exchangeShop.recipes.find(r=>r.id===recipeId);if(!recipe)return;const validReq=recipe.requirements.filter(q=>q.materialId&&q.qty>0);const validOut=recipe.outputs.filter(o=>o.reward);if(!validReq.length||!validOut.length)return;const need=validReq.map(q=>`${materialName(q.materialId)} ×${q.qty}`).join(" ＋ ");const get=validOut.map(o=>`${o.rarity} ${o.reward}${o.qty>1?` ×${o.qty}`:""}`).join("、");if(!confirm(`${need}\n\n↓ 交換\n\n${get}\n\n交換しますか？`))return;try{await updateCloud(s=>{for(const q of validReq){const m=s.materials.find(m=>m.id===q.materialId);if(!m||m.balance<q.qty)throw new Error("NOT_ENOUGH_MATERIAL")}for(const q of validReq)s.materials.find(m=>m.id===q.materialId).balance-=q.qty;const now=new Date().toLocaleString("ja-JP"),dateKey=jpDateKey(),sourceName=String(s.exchangeShop.name||"交換所").slice(0,40);for(const o of validOut){const reward=makeRewardFromExchange(o,sourceName,now,dateKey);if(isBoxReward(o.rarity,"",0))s.rewards.push(reward);s.history.push({time:now,dateKey,type:"exchange",sourceType:"exchange",sourceName,gachaName:"",drawNo:0,rarity:o.rarity,reward:reward.reward,paid:true});}return s});showMaterials()}catch(e){console.error(e);openModal(`<h2>交換できませんでした</h2><p>${e.message==="NOT_ENOUGH_MATERIAL"?"素材が足りません。":"交換設定を確認してください。"}</p><button class="singleBtn" id="modalCloseBtn">OK</button>`)}}
+async function doExchange(recipeId){const recipe=state.exchangeShop.recipes.find(r=>r.id===recipeId);if(!recipe)return;const validReq=recipe.requirements.filter(q=>q.materialId&&q.qty>0);const validOut=recipe.outputs.filter(o=>o.reward);if(!validReq.length||!validOut.length)return;const need=validReq.map(q=>`${materialName(q.materialId)} ×${q.qty}`).join(" ＋ ");const get=validOut.map(o=>`${o.rarity} ${o.reward}${o.qty>1?` ×${o.qty}`:""}`).join("、");if(!confirm(`${need}\n\n↓ 交換\n\n${get}\n\n交換しますか？`))return;try{await updateCloud(s=>{for(const q of validReq){const m=s.materials.find(m=>m.id===q.materialId);if(!m||m.balance<q.qty)throw new Error("NOT_ENOUGH_MATERIAL")}for(const q of validReq)s.materials.find(m=>m.id===q.materialId).balance-=q.qty;const now=new Date().toLocaleString("ja-JP"),dateKey=jpDateKey(),sourceName="素材・交換所";for(const o of validOut){const reward=makeRewardFromExchange(o,sourceName,now,dateKey);if(isBoxReward(o.rarity,"",0))s.rewards.push(reward);s.history.push({time:now,dateKey,type:"exchange",sourceType:"exchange",sourceName,gachaName:"",drawNo:0,rarity:o.rarity,reward:reward.reward,paid:true});}return s});showMaterials()}catch(e){console.error(e);openModal(`<h2>交換できませんでした</h2><p>${e.message==="NOT_ENOUGH_MATERIAL"?"素材が足りません。":"交換設定を確認してください。"}</p><button class="singleBtn" id="modalCloseBtn">OK</button>`)}}
 document.getElementById("materialBtn").onclick=showMaterials;
 
 document.getElementById("adminBtn").onclick=()=>{
